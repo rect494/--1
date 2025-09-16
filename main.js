@@ -1,551 +1,71 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Study Cards — SRS 暗記カード</title>
-<style>
-  :root {
-    --bg: #0b1020;
-    --card: #0f1724;
-    --accent: #7ef0a6;
-  }
-  * {
-    box-sizing: border-box;
-  }
-  body {
-    margin: 0;
-    font-family: system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', Meiryo,
-      sans-serif;
-    background: linear-gradient(180deg, #071129, #08162a);
-    color: #e6eef9;
-  }
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 18px;
-    align-items: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  }
-  .container {
-    display: flex;
-    gap: 16px;
-    padding: 18px;
-    max-width: 1100px;
-    margin: 20px auto;
-    flex-wrap: wrap;
-  }
-  .left,
-  .right {
-    background: rgba(255, 255, 255, 0.02);
-    padding: 16px;
-    border-radius: 10px;
-    width: 100%;
-    max-width: 520px;
-    margin-bottom: 20px;
-  }
-  @media (min-width: 720px) {
-    .left,
-    .right {
-      width: 48%;
-      margin-bottom: 0;
-    }
-  }
-  .form-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .form-row input {
-    flex: 1;
-    padding: 8px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    background: transparent;
-    color: inherit;
-  }
-  button {
-    background: var(--accent);
-    border: none;
-    color: #052018;
-    padding: 8px 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    user-select: none;
-  }
-  button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  .io-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-  }
-  .card-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 300px;
-    overflow: auto;
-  }
-  .card-list li {
-    padding: 8px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.01);
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .review-area {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: center;
-  }
-  .card-face {
-    background: var(--card);
-    padding: 28px;
-    border-radius: 10px;
-    width: 100%;
-    min-height: 120px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    white-space: pre-wrap;
-  }
-  .card-back {
-    background: rgba(255, 255, 255, 0.02);
-    padding: 16px;
-    border-radius: 10px;
-    width: 100%;
-    min-height: 80px;
-    white-space: pre-wrap;
-  }
-  .review-btns {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .review-btns button {
-    background: transparent;
-    color: var(--accent);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 8px 10px;
-    border-radius: 8px;
-  }
-  .footer {
-    padding: 12px;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.4);
-  }
-  input[type='file'] {
-    color: white;
-  }
-</style>
-</head>
-<body>
-<header class="topbar">
-  <h1>Study Cards</h1>
-  <div class="stats">
-    <span id="dueCount">0</span> 件の復習 • <span id="totalCount">0</span> 総数
-  </div>
-</header>
-<main class="container">
-  <section class="left">
-    <h2>カード作成</h2>
-    <div class="form-row">
-      <input id="inputFront" placeholder="表（問題）" />
-      <input id="inputBack" placeholder="裏（答え）" />
-      <button id="addCardBtn">カードを追加</button>
-    </div>
-    <div class="io-row">
-      <input id="fileInput" type="file" accept="text/csv" />
-      <button id="exportBtn">CSVエクスポート</button>
-      <button id="clearBtn">全削除</button>
-    </div>
-    <h3>カード一覧</h3>
-    <ul id="cardList" class="card-list"></ul>
-  </section>
-  <section class="right">
-    <h2>復習モード</h2>
-    <div id="reviewArea" class="review-area">
-      <div id="front" class="card-face">準備完了 — カードを追加してね</div>
-      <button id="showBtn">答えを表示</button>
-      <div id="back" class="card-back" style="display:none"></div>
-      <div id="reviewBtns" class="review-btns" style="display:none">
-        <button class="rev" data-quality="0">Again</button>
-        <button class="rev" data-quality="2">Hard</button>
-        <button class="rev" data-quality="4">Good</button>
-        <button class="rev" data-quality="5">Easy</button>
-      </div>
-    </div>
-  </section>
-</main>
-<footer class="footer">
-  <small>オフライン対応（PWA）・データはブラウザに保存されます。</small>
-</footer>
-<script>
-  (function () {
-    "use strict";
+// main.js
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const path = require('path');
+const fs = require('fs');
 
-    // DOM
-    var inputFront = document.getElementById("inputFront");
-    var inputBack = document.getElementById("inputBack");
-    var addCardBtn = document.getElementById("addCardBtn");
-    var cardList = document.getElementById("cardList");
-    var totalCountEl = document.getElementById("totalCount");
-    var dueCountEl = document.getElementById("dueCount");
+let mainWindow;
 
-    var fileInput = document.getElementById("fileInput");
-    var exportBtn = document.getElementById("exportBtn");
-    var clearBtn = document.getElementById("clearBtn");
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
 
-    var frontEl = document.getElementById("front");
-    var backEl = document.getElementById("back");
-    var showBtn = document.getElementById("showBtn");
-    var reviewBtns = document.getElementById("reviewBtns");
+  mainWindow.loadFile(path.join(__dirname, '../public/index.html'));
 
-    // storage key
-    var STORAGE_KEY = "study_cards_v1";
+  // 開発者ツールを開く（開発中のみ）
+  // mainWindow.webContents.openDevTools();
 
-    // data model
-    // card = {id, front, back, createdAt, interval (days), repetition, ef, nextReview (ISO)}
-    function loadCards() {
-      try {
-        var raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return [];
-        return JSON.parse(raw);
-      } catch (e) {
-        console.error(e);
-        return [];
-      }
-    }
-    function saveCards(cards) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+// アプリ起動時
+app.whenReady().then(createWindow);
+
+// macOS 対応
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// IPC: ファイル選択
+ipcMain.handle('select-files', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Audio', extensions: ['mp3', 'wav', 'flac'] }],
+  });
+  return result.canceled ? [] : result.filePaths;
+});
+
+// IPC: ファイルコピー（アプリ用フォルダ保存）
+ipcMain.handle('save-files', (event, filePaths) => {
+  const appDataPath = path.join(app.getPath('userData'), 'music');
+  if (!fs.existsSync(appDataPath)) fs.mkdirSync(appDataPath, { recursive: true });
+
+  const savedFiles = [];
+  for (const filePath of filePaths) {
+    const fileName = path.basename(filePath);
+    let destPath = path.join(appDataPath, fileName);
+
+    let counter = 1;
+    while (fs.existsSync(destPath)) {
+      const parsed = path.parse(fileName);
+      destPath = path.join(appDataPath, `${parsed.name}_${counter}${parsed.ext}`);
+      counter++;
     }
 
-    function uid() {
-      return (
-        "c_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
-      );
-    }
+    fs.copyFileSync(filePath, destPath);
+    savedFiles.push(destPath);
+  }
 
-    // SM-2 simplified implementation
-    function sm2(card, quality) {
-      // quality: 0..5 (0 again, 2 hard, 4 good, 5 easy mapped from UI)
-      if (typeof card.repetition !== "number") card.repetition = 0;
-      if (typeof card.ef !== "number") card.ef = 2.5;
-      if (typeof card.interval !== "number") card.interval = 0;
-
-      if (quality < 3) {
-        card.repetition = 0;
-        card.interval = 1;
-      } else {
-        card.repetition += 1;
-        if (card.repetition === 1) card.interval = 1;
-        else if (card.repetition === 2) card.interval = 6;
-        else card.interval = Math.round(card.interval * card.ef);
-
-        // update efactor
-        card.ef = Math.max(
-          1.3,
-          card.ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-        );
-      }
-      // set nextReview to today + interval days
-      var next = new Date();
-      next.setHours(0, 0, 0, 0);
-      next.setDate(next.getDate() + card.interval);
-      card.nextReview = next.toISOString();
-      return card;
-    }
-
-    // UI
-    function renderList() {
-      var cards = loadCards();
-      cardList.innerHTML = "";
-      cards.forEach(function (c) {
-        var li = document.createElement("li");
-        var left = document.createElement("div");
-        left.style.flex = "1";
-        left.innerHTML =
-          "<strong>" +
-          escapeHtml(c.front) +
-          "</strong><div style=\"font-size:12px;color:rgba(255,255,255,0.5);\">次回: " +
-          (c.nextReview ? c.nextReview.split("T")[0] : "未設定") +
-          "</div>";
-        var del = document.createElement("button");
-        del.textContent = "削除";
-        del.style.background = "transparent";
-        del.style.color = "white";
-        del.style.border = "1px solid rgba(255,255,255,0.06)";
-        del.style.padding = "6px 8px";
-        del.style.borderRadius = "6px";
-        del.onclick = function () {
-          if (confirm("カードを削除しますか？")) {
-            var list = loadCards().filter(function (x) {
-              return x.id !== c.id;
-            });
-            saveCards(list);
-            refresh();
-          }
-        };
-        li.appendChild(left);
-        li.appendChild(del);
-        cardList.appendChild(li);
-      });
-      totalCountEl.textContent = cards.length;
-    }
-
-    function refresh() {
-      renderList();
-      prepareReview();
-    }
-
-    addCardBtn.addEventListener("click", function () {
-      var f = inputFront.value.trim();
-      var b = inputBack.value.trim();
-      if (!f || !b) {
-        alert("表と裏を入力してください");
-        return;
-      }
-      var cards = loadCards();
-      var now = new Date();
-      var card = {
-        id: uid(),
-        front: f,
-        back: b,
-        createdAt: now.toISOString(),
-        interval: 0,
-        repetition: 0,
-        ef: 2.5,
-        nextReview: now.toISOString(),
-      };
-      cards.unshift(card);
-      saveCards(cards);
-      inputFront.value = "";
-      inputBack.value = "";
-      refresh();
-    });
-
-    // CSV import/export (CSV: front,back)
-    exportBtn.addEventListener("click", function () {
-      var cards = loadCards();
-      var csv =
-        "front,back,createdAt,interval,repetition,ef,nextReview\n" +
-        cards
-          .map(function (c) {
-            return (
-              '"' +
-              c.front.replace(/"/g, '""') +
-              '","' +
-              c.back.replace(/"/g, '""') +
-              '","' +
-              c.createdAt +
-              '","' +
-              c.interval +
-              '","' +
-              c.repetition +
-              '","' +
-              c.ef +
-              '","' +
-              (c.nextReview || "") +
-              '"'
-            );
-          })
-          .join("\n");
-      var blob = new Blob([csv], { type: "text/csv" });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url;
-      a.download = "study-cards.csv";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    });
-
-    fileInput.addEventListener("change", function (e) {
-      var f = e.target.files[0];
-      if (!f) return;
-      var reader = new FileReader();
-      reader.onload = function () {
-        var text = reader.result;
-        try {
-          var lines = text.split(/\r?\n/);
-          var rows = [];
-          for (var i = 1; i < lines.length; i++) {
-            if (!lines[i].trim()) continue;
-            // naive csv parse
-            var parts = parseCSVLine(lines[i]);
-            var front = parts[0] || "";
-            var back = parts[1] || "";
-            if (front && back)
-              rows.push({
-                id: uid(),
-                front: front,
-                back: back,
-                createdAt: new Date().toISOString(),
-                interval: 0,
-                repetition: 0,
-                ef: 2.5,
-                nextReview: new Date().toISOString(),
-              });
-          }
-          var cards = loadCards().concat(rows);
-          saveCards(cards);
-          refresh();
-          alert("インポート完了: " + rows.length + " 件");
-        } catch (err) {
-          alert("CSVの読み込みに失敗しました");
-          console.error(err);
-        }
-      };
-      reader.readAsText(f, "UTF-8");
-    });
-
-    function parseCSVLine(line) {
-      // very simple CSV parser for two columns
-      var res = [];
-      var cur = "";
-      var inQuotes = false;
-      for (var i = 0; i < line.length; i++) {
-        var ch = line[i];
-        if (ch === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            cur += '"';
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
-        } else if (ch === "," && !inQuotes) {
-          res.push(cur);
-          cur = "";
-        } else {
-          cur += ch;
-        }
-      }
-      res.push(cur);
-      return res;
-    }
-
-    clearBtn.addEventListener("click", function () {
-      if (confirm("全てのカードを削除しますか？")) {
-        localStorage.removeItem(STORAGE_KEY);
-        refresh();
-      }
-    });
-
-    // review flow
-    var reviewQueue = [];
-    var currentIndex = 0;
-    var currentCard = null;
-
-    function prepareReview() {
-      var cards = loadCards();
-      var today = new Date();
-      today.setHours(0, 0, 0, 0);
-      reviewQueue = cards.filter(function (c) {
-        var nr = c.nextReview ? new Date(c.nextReview) : new Date(0);
-        nr.setHours(0, 0, 0, 0);
-        return nr <= today;
-      });
-      // sort by nextReview asc
-      reviewQueue.sort(function (a, b) {
-        return new Date(a.nextReview) - new Date(b.nextReview);
-      });
-      currentIndex = 0;
-      dueCountEl.textContent = reviewQueue.length;
-      if (reviewQueue.length > 0) {
-        loadCurrent();
-      } else {
-        frontEl.textContent = "今日の復習はありません。カードを追加しよう！";
-        backEl.style.display = "none";
-        reviewBtns.style.display = "none";
-        showBtn.style.display = "none";
-      }
-    }
-
-    function loadCurrent() {
-      currentCard = reviewQueue[currentIndex];
-      frontEl.textContent = currentCard.front;
-      backEl.textContent = currentCard.back;
-      backEl.style.display = "none";
-      reviewBtns.style.display = "none";
-      showBtn.style.display = "inline-block";
-    }
-
-    showBtn.addEventListener("click", function () {
-      backEl.style.display = "block";
-      reviewBtns.style.display = "flex";
-      showBtn.style.display = "none";
-    });
-
-    // review button handling
-    document.querySelectorAll(".rev").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var q = parseInt(btn.getAttribute("data-quality"), 10);
-        if (!currentCard) return;
-        // update card via SM-2
-        var cards = loadCards();
-        for (var i = 0; i < cards.length; i++) {
-          if (cards[i].id === currentCard.id) {
-            cards[i] = sm2(cards[i], q);
-            break;
-          }
-        }
-        saveCards(cards);
-        // remove from queue and move next
-        reviewQueue.splice(currentIndex, 1);
-        if (currentIndex >= reviewQueue.length) currentIndex = 0;
-        if (reviewQueue.length > 0) {
-          loadCurrent();
-        } else {
-          frontEl.textContent = "今日の復習は完了！お疲れさま";
-          backEl.style.display = "none";
-          reviewBtns.style.display = "none";
-          showBtn.style.display = "none";
-        }
-        refresh();
-      });
-    });
-
-    // helper
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-    }
-
-    // initial
-    function init() {
-      renderList();
-      prepareReview();
-    }
-
-    init();
-
-    // PWA Service Worker registration
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", function () {
-        navigator.serviceWorker
-          .register("sw.js")
-          .then(function (registration) {
-            console.log("ServiceWorker registration successful with scope: ", registration.scope);
-          })
-          .catch(function (err) {
-            console.log("ServiceWorker registration failed: ", err);
-          });
-      });
-    }
-  })();
-</script>
-
-</body>
-</html>
+  return savedFiles;
+});
